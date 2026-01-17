@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Online</title>
+<style>
+body { font-family: Arial; padding: 15px; }
+textarea { width: 100%; height: 200px; }
+button { padding: 12px; width: 100%; margin-top: 10px; }
+pre { background: #eee; padding: 10px; }
+</style>
+</head>
+<body>
+
+<h3>🐍 Python en ligne pour étudiants</h3>
+
+<textarea id="code">print("Bonjour 👋")</textarea>
+
+<button onclick="runCode()">▶ Exécuter</button>
+
+<pre id="output"></pre>
+
+<script>
+function runCode() {
+    fetch("/run", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({code: document.getElementById("code").value})
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById("output").innerText = data.output;
+    });
+}
+</script>
+
+</body>
+</html>
