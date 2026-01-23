@@ -37,4 +37,5 @@ def run_code():
     return jsonify({"output": output})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))  # Railway donne le port automatiquement
+    app.run(host="0.0.0.0", port=port)
