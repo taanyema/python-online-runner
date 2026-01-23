@@ -1,10 +1,10 @@
 from flask import Flask, request, render_template_string
 import os
+import sys
 import io
-import contextlib
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key")
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
 
 HTML = """
 <!DOCTYPE html>
@@ -12,21 +12,13 @@ HTML = """
 <head>
   <meta charset="utf-8">
   <title>Python Online Runner</title>
-  <style>
-    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
-    textarea { width: 100%; height: 200px; font-family: monospace; }
-    input { width: 100%; padding: 8px; margin-top: 5px; }
-    button { padding: 10px 20px; margin-top: 10px; }
-    pre { background: #eee; padding: 10px; }
-  </style>
 </head>
 <body>
   <h2>🐍 Python Online Runner</h2>
-
   <form method="post">
-    <textarea name="code" placeholder="Écris ton code Python ici...">{{ code }}</textarea>
-    <input type="text" name="user_input" placeholder="Entrée (input simulé)">
-    <button type="submit">▶ Exécuter</button>
+    <textarea name="code" rows="10" cols="60">{{ code }}</textarea><br><br>
+    <input type="text" name="user_input" placeholder="Entrée simulée"><br><br>
+    <button type="submit">Exécuter</button>
   </form>
 
   {% if output %}
@@ -37,10 +29,7 @@ HTML = """
 </html>
 """
 
-FORBIDDEN = [
-    "import os", "import sys", "subprocess",
-    "open(", "eval(", "exec(", "__"
-]
+FORBIDDEN = ["import os", "import sys", "subprocess", "open(", "eval", "exec"]
 
 @app.route("/", methods=["GET", "POST"])
 def home():
@@ -53,22 +42,27 @@ def home():
 
         for bad in FORBIDDEN:
             if bad in code:
-                output = "❌ Code interdit pour des raisons de sécurité."
-                return render_template_string(HTML, output=output, code=code)
+                return render_template_string(
+                    HTML, code=code,
+                    output="❌ Code interdit pour raisons de sécurité."
+                )
 
         code = code.replace("input()", f'"{user_input}"')
 
+        old_stdout = sys.stdout
+        sys.stdout = io.StringIO()
+
         try:
-            buffer = io.StringIO()
-            with contextlib.redirect_stdout(buffer):
-                exec(code, {})
-            output = buffer.getvalue() or "✅ Exécuté sans sortie"
+            exec(code, {})
+            output = sys.stdout.getvalue()
         except Exception as e:
             output = f"❌ Erreur : {e}"
 
-    return render_template_string(HTML, output=output, code=code)
+        sys.stdout = old_stdout
+
+    return render_template_string(HTML, code=code, output=output)
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 3000))
+    port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
