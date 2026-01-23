@@ -1,24 +1,28 @@
 from flask import Flask, request, render_template_string
 import os
-import sys
-import io
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
+app.secret_key = os.environ.get("SECRET_KEY", "dev_secret")  # utiliser la variable d'environnement
 
 HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
   <title>Python Online Runner</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
+    textarea { width: 100%; height: 200px; font-family: monospace; }
+    input { width: 100%; padding: 8px; margin-top: 5px; }
+    button { padding: 10px 20px; margin-top: 10px; }
+    pre { background: #f4f4f4; padding: 10px; }
+  </style>
 </head>
 <body>
   <h2>🐍 Python Online Runner</h2>
   <form method="post">
-    <textarea name="code" rows="10" cols="60">{{ code }}</textarea><br><br>
-    <input type="text" name="user_input" placeholder="Entrée simulée"><br><br>
-    <button type="submit">Exécuter</button>
+    <textarea name="code" placeholder="Écris ton code Python ici...">{{ code }}</textarea><br>
+    <input type="text" name="user_input" placeholder="Entrée simulée ici"><br>
+    <button type="submit">▶ Exécuter</button>
   </form>
 
   {% if output %}
@@ -35,34 +39,29 @@ FORBIDDEN = ["import os", "import sys", "subprocess", "open(", "eval", "exec"]
 def home():
     output = ""
     code = ""
+    user_input = ""
 
     if request.method == "POST":
-        code = request.form.get("code", "")
-        user_input = request.form.get("user_input", "")
+        code = request.form["code"]
+        user_input = request.form["user_input"]
 
         for bad in FORBIDDEN:
             if bad in code:
-                return render_template_string(
-                    HTML, code=code,
-                    output="❌ Code interdit pour raisons de sécurité."
-                )
+                output = "❌ Code interdit pour des raisons de sécurité."
+                return render_template_string(HTML, output=output, code=code)
 
-        code = code.replace("input()", f'"{user_input}"')
-
-        old_stdout = sys.stdout
-        sys.stdout = io.StringIO()
+        code_safe = code.replace("input(", f'"{user_input}" #input simulé(')
 
         try:
-            exec(code, {})
-            output = sys.stdout.getvalue()
+            local_vars = {}
+            exec(code_safe, {}, local_vars)
+            output = "\n".join(str(v) for v in local_vars.values())
         except Exception as e:
             output = f"❌ Erreur : {e}"
 
-        sys.stdout = old_stdout
+    return render_template_string(HTML, output=output, code=code)
 
-    return render_template_string(HTML, code=code, output=output)
-
-
+# NE PAS changer cette partie pour Railway
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
